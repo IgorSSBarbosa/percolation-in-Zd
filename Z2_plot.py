@@ -50,8 +50,9 @@ def plot_subgraphs_table(subgraphs, max_plots=20, figsize=(16, 12), title="ZDSub
     n_plots = min(len(subgraphs), max_plots)
     
     # Calculate grid dimensions
-    n_cols = min(5, n_plots)  # Maximum 5 columns
-    n_rows = (n_plots + n_cols - 1) // n_cols
+    perf_n_rows = int(np.sqrt(3*n_plots)//2)
+    n_rows = min(perf_n_rows, n_plots)  # Maximum 5 columns
+    n_cols = (n_plots + n_rows - 1) // n_rows
     
     fig, axes = plt.subplots(n_rows, n_cols, figsize=figsize)
 
