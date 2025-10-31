@@ -1,3 +1,4 @@
+import argparse
 import numpy as np
 from graph_d import ZDSubgraph
 from norm_origin import normalize_origin
@@ -5,13 +6,15 @@ from Z2_plot import plot_subgraphs_table
 from tqdm import tqdm
 
 class cluster_number_density:
-    def __init__(self, s, d=2):
-        self.s = s
-        self.d = d
+    def __init__(self, args):
+        self.s = args["max_cluster_size"]
+        self.d = args["dimension"]
+        self.plot = args["plot"]
+        self.max_plots = args["max_plots"]
         
         # Construct a base graph with just the origin
-        graph = ZDSubgraph(d=d)
-        origin = tuple([0]*d)
+        graph = ZDSubgraph(d=self.d)
+        origin = tuple([0]*self.d)
         graph.add_vertex(origin)
 
         # Create a dictionary for all the possible clusters
@@ -24,6 +27,34 @@ class cluster_number_density:
         initial_cluster_boundary_pair = set()
         initial_cluster_boundary_pair.add((self._graph_to_tuple(graph), boundary))
         self.size_to_clusters_boundaries_pair[1] = initial_cluster_boundary_pair  # Size 1, not 0
+
+    @staticmethod
+    def add_arguments(parser):
+        parser.add_argument(
+            "--plot",
+            action='store_true',
+            help='When add this argument plots a visualization of the clusters, only available in dimension 2',
+        )
+        parser.add_argument(
+            "--max_plots",
+            default=20,
+            type=int,
+            help='The maximum number of clusters that will be visualized',
+        )
+        parser.add_argument(
+            "--dimension",
+            "-d",
+            type=int,
+            default=2,
+            help='The dimention in Z^d',
+        )
+        parser.add_argument(
+            "--max_cluster_size",
+            "-s",
+            default=5,
+            type=int,
+            help="The maximum size of cluster will be calculated",
+        )
 
     def _graph_to_tuple(self, graph):
         """Convert graph to hashable tuple representation"""
@@ -122,15 +153,18 @@ class cluster_number_density:
 
 
         # Plot the final clusters
-        if self.s in self.size_to_clusters_boundaries_pair:
+
+        if self.plot:
             final_clusters_boundary_pair = []
             for cluster_tuple, boundary in self.size_to_clusters_boundaries_pair[self.s]:
                 cluster = self._tuple_to_graph(cluster_tuple)
                 final_clusters_boundary_pair.append((cluster,boundary))
             
-            plot_subgraphs_table(final_clusters_boundary_pair,max_plots=40, title=f"Clusters of size {self.s}")
-        else:
-            print(f"No clusters of size {self.s} found")
+            plot_subgraphs_table(
+                final_clusters_boundary_pair,
+                max_plots=self.max_plots,
+                title=f"Clusters of size {self.s}"
+            )
 
     def get_cluster_counts(self):
         """Return the number of clusters of each size"""
@@ -141,7 +175,9 @@ class cluster_number_density:
     
 
 if __name__ == "__main__":
-    s=6
-    d=2
-    c = cluster_number_density(s, d)
+    parser = argparse.ArgumentParser(description="Initialization Arguments")
+    cluster_number_density.add_arguments(parser)
+    args = parser.parse_args() # Use empty list to avoid command line parsing
+
+    c = cluster_number_density(vars(args))
     c.run()
