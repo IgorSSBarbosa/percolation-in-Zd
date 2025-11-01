@@ -79,8 +79,7 @@ class cluster_number_density:
         
         for e in cluster.directions:
             new_vertex = tuple(vertex[i] + e[i] for i in range(self.d))
-            edge = tuple(sorted([vertex, new_vertex]))
-            if edge in cluster.edges:
+            if new_vertex in cluster.vertices:
                 neighbor_count += 1
                 
         return neighbor_count == 2**self.d
