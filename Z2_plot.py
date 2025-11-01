@@ -77,7 +77,7 @@ def plot_subgraphs_table(subgraphs, max_plots=20, figsize=(16, 12), title="ZDSub
         ax = axes_flat[idx]
         (G,boundary) = subgraphs[idx]
         
-        plot_single_subgraph(ax, G, boundary, idx)
+        plot_single_subgraph(ax, G, boundary, n_plots, idx)
     
     # Hide unused subplots
     for idx in range(n_plots, len(axes_flat)):
@@ -91,7 +91,7 @@ def plot_subgraphs_table(subgraphs, max_plots=20, figsize=(16, 12), title="ZDSub
 
 
 
-def plot_single_subgraph(ax, G, boundary, idx=None):
+def plot_single_subgraph(ax, G, boundary, n_plots, idx=None):
     """
     Plot a single ZDSubgraph on given axes
     """
@@ -121,35 +121,38 @@ def plot_single_subgraph(ax, G, boundary, idx=None):
     inner_vertex = G.vertices - boundary
     
     # Plot inner vertices (regular vertices)
+    standard_size = min(20, 50/np.sqrt(n_plots))
+    vertices_size = max(0.1, standard_size)
     if inner_vertex:
         inner_vert_x = [v[0] for v in inner_vertex]
         inner_vert_y = [v[1] for v in inner_vertex]
-        ax.scatter(inner_vert_x, inner_vert_y, color='black', s=20, zorder=3, label='Inner vertex')
+        ax.scatter(inner_vert_x, inner_vert_y, color='black', s=vertices_size, zorder=3, label='Inner vertex')
     
     # Plot boundary vertices with different color
     if boundary:
         boundary_x = [v[0] for v in boundary]
         boundary_y = [v[1] for v in boundary]
-        ax.scatter(boundary_x, boundary_y, color='red', s=20, zorder=4, label='Boundary')
+        ax.scatter(boundary_x, boundary_y, color='red', s=vertices_size, zorder=3, label='Boundary')
     
-    # Plot internal edges (blue)
+    # Plot internal edges (black)
+    edge_size = min(max(0.2,standard_size//2),2)
     if G.edges:
         edges_list = []
         for edge in G.edges:
             edges_list.append([edge[0], edge[1]])
         
-        lc = LineCollection(edges_list, colors='black', linewidths=2, zorder=2)
+        lc = LineCollection(edges_list, colors='black', linewidths=edge_size, zorder=2)
         ax.add_collection(lc)
     
-    # Plot boundary edges with different color (green)
+    # Plot boundary edges with different color (gray)
     boundary = G.get_boundary()
     if boundary:
         boundary_list = []
         for edge in boundary:
             boundary_list.append([edge[0], edge[1]])
         
-        lc_boundary = LineCollection(boundary_list, colors='gray', linewidths=2, 
-                                   linestyle='solid', alpha=0.8, zorder=1)
+        lc_boundary = LineCollection(boundary_list, colors='gray', linewidths=edge_size, 
+                                   linestyle='solid', alpha=0.8, zorder=2)
         ax.add_collection(lc_boundary)
     
     # Set plot properties - remove grid and coordinates
@@ -171,8 +174,10 @@ def plot_single_subgraph(ax, G, boundary, idx=None):
     title_parts.append(f"V:{len(G.vertices)}")
     title_parts.append(f"E:{len(G.edges)}")
     title_parts.append(f"B:{G.boundary_size()}")
+
+    fontsize = min(9, standard_size)
     
-    ax.set_title(' | '.join(title_parts), fontsize=9)
+    ax.set_title(' | '.join(title_parts), fontsize=fontsize)
 
 def generate_random_subgraphs(n_graphs=20, max_size=6):
     """
