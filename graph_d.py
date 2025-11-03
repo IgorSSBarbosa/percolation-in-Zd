@@ -69,8 +69,9 @@ class ZDSubgraph:
                     neighbor = list(vertex)
                     neighbor[dim] += delta
                     neighbor = tuple(neighbor)
+                    testing_edge = tuple(sorted([vertex,neighbor]))
                     
-                    if neighbor not in self.vertices:
+                    if testing_edge not in self.edges:
                         boundary_edge = tuple(sorted([vertex, neighbor]))
                         boundary_edges.add(boundary_edge)
         
