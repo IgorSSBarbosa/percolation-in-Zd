@@ -37,8 +37,31 @@ def theta(y, p):
     theta_compl = sum(v)
     theta = [1 - x for x in theta_compl]
     plt.figure(figsize=(16,12))
-    plt.plot(p, theta, label=f'k_{key}(p)', linewidth=2)
+    plt.plot(p, theta, label='theta_(p)', linewidth=2)
     plt.show()
+
+def mean_cluster_size(y,p):
+    v = [0]*len(y)
+    for (key, value) in y.items():
+        v[int(key)-1] = (int(key)**2)*value
+
+    qui = sum(v)
+    plt.figure(figsize=(16,12))
+    plt.plot(p, qui, label='qui(p)', linewidth=2)
+    plt.show()
+
+def p_c(y, numb_points):
+    v = [0]*len(y)
+    p_c = [0]*len(y)
+    for (key, value) in y.items():
+        v[int(key)-1] = int(key)*value
+    p_c = np.argmax(v, axis=1)/numb_points
+
+    plt.figure(figsize=(16,12))
+    plt.plot(p_c, label='Critical point', linewidth=2)
+    plt.show()
+    
+
 
 if __name__ == '__main__':
     cluster_density_file = 'Z2clusterdensity.json'
@@ -48,3 +71,6 @@ if __name__ == '__main__':
 
     y = cluster_density_eval(p, cluster_density_file)
     theta(y,p)
+    mean_cluster_size(y,p)
+
+    p_c(y,num_points)
