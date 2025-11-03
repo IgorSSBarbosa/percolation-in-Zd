@@ -32,7 +32,7 @@ def plot_polynomials(poly_dict, p_range=(0, 1), num_points=1000):
             def safe_eval(p_val):
                 # Replace p with the actual value in the expression
                 expr = poly_str.replace('p', f'({p_val})')
-                return int(key)*eval(expr)
+                return eval(expr)
             
             # Vectorize the function to work with arrays
             vec_eval = np.vectorize(safe_eval)
@@ -64,6 +64,6 @@ if __name__ == "__main__":
     with open(cluster_density_file, 'r') as f:
         data = json.load(f)
 
-    cluster_density_file = data['cluster_density']
+    cluster_density_poly = data['cluster_density']
     
-    plot_polynomials(cluster_density_file)
+    plot_polynomials(cluster_density_poly)
