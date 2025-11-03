@@ -1,4 +1,6 @@
 import argparse
+import json
+
 from graph_d import ZDSubgraph
 from Z2_plot import plot_subgraphs_table
 from tqdm import tqdm
@@ -9,6 +11,8 @@ class ClusterGenerator:
     def __init__(self, args):
         self.s = args["max_size_calculated"]
         self.d = args["dimension"]
+
+        self.file = args["save_file"]
         
         # Initialize with origin
         graph = ZDSubgraph(d=self.d)
@@ -49,6 +53,12 @@ class ClusterGenerator:
             type=int,
             default = 442,
             help="set the maximum number of clusters printed"
+        )
+        parser.add_argument(
+            "--save_file",
+            "-save",
+            type=str,
+            help="File to save the calculated polynomials",
         )
 
     def _calculate_boundary(self, graph):
@@ -206,17 +216,25 @@ class ClusterGenerator:
 
     def run(self):
         """Generate all clusters up to size s"""
+        cluster_density = dict()
+
         for step in tqdm(range(1, self.s)):
             self.recurence_step(step)
             print(f"Step {step+1}: {len(self.size_to_clusters_boundaries_pair[step+1])} clusters")
         
-        final_size = min(self.s, max(self.size_to_clusters_boundaries_pair.keys()))
-        final_clusters = []
+            final_size = min(self.s, max(self.size_to_clusters_boundaries_pair.keys()))
+            final_clusters = []
+            
+            for cluster_tuple, boundary in self.size_to_clusters_boundaries_pair.get(final_size, set()):
+                cluster = self._tuple_to_graph(cluster_tuple)
+                final_clusters.append((cluster,boundary))
+
+            polynomial = cluster_probability(final_clusters)
+            cluster_density[final_size] = polynomial
         
-        for cluster_tuple, boundary in self.size_to_clusters_boundaries_pair.get(final_size, set()):
-            cluster = self._tuple_to_graph(cluster_tuple)
-            final_clusters.append((cluster,boundary))
-        
+        with open(self.file,'w') as f:
+            json.dump(cluster_density, f, indent=4)
+
         return final_clusters
 
     def get_statistics(self):
@@ -281,6 +299,25 @@ def normalize_origin_with_boundary(graph, boundary):
     
     return normalized_graph, normalized_boundary
 
+def cluster_probability(group):
+    "returns a list of polynomials f(s) = P_p(|C|=s), the probability of a the origin cluster to have the size s"
+    g = dict()
+
+    # count the number of p^op (1 - p)^cl
+    for (cluster,_) in group:
+        open_edges = len(cluster.edges)
+        closed_edges = len(cluster.get_boundary())
+        if (open_edges, closed_edges) in g.keys():
+            g[(open_edges,closed_edges)] += 1
+        else:
+            g[(open_edges,closed_edges)] = 1
+    
+    # create the polynomial
+    f = str()
+    for (open_edges,closed_edges) in g.keys():
+        f += f' + {g[(open_edges,closed_edges)]}*p**{open_edges}*(1-p)**{closed_edges}'
+    
+    return f[3:]
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description="Initialization Arguments")
