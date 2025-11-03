@@ -1,69 +1,46 @@
-import argparse
-import numpy as np
 from graph_d import ZDSubgraph
-from norm_origin import normalize_origin
 from Z2_plot import plot_subgraphs_table
 from tqdm import tqdm
+from itertools import chain, combinations
 
-class cluster_number_density:
-    def __init__(self, args):
-        self.s = args["max_cluster_size"]
-        self.d = args["dimension"]
-        self.plot = args["plot"]
-        self.max_plots = args["max_plots"]
+
+class ClusterGenerator:
+    def __init__(self, s, d=2):
+        self.s = s
+        self.d = d
         
-        # Construct a base graph with just the origin
-        graph = ZDSubgraph(d=self.d)
-        origin = tuple([0]*self.d)
+        # Initialize with origin
+        graph = ZDSubgraph(d=d)
+        origin = tuple([0] * d)
         graph.add_vertex(origin)
-
-        # Create a dictionary for all the possible clusters
-        self.size_to_clusters_boundaries_pair = dict()
-
-        # For each cluster we associate with its boundary, i.e. vertices which can recieve more neighbor vertex
-        boundary = frozenset([origin])  # Use frozenset for hashability
         
-        # Store as tuple (graph, boundary) - both need to be hashable
-        initial_cluster_boundary_pair = set()
-        initial_cluster_boundary_pair.add((self._graph_to_tuple(graph), boundary))
-        self.size_to_clusters_boundaries_pair[1] = initial_cluster_boundary_pair  # Size 1, not 0
+        self.size_to_clusters_boundaries_pair = dict()
+        boundary = self._calculate_boundary(graph)
+        
+        initial_pair = set()
+        initial_pair.add((self._graph_to_tuple(graph), frozenset(boundary)))
+        self.size_to_clusters_boundaries_pair[1] = initial_pair
+        print(f"Step 1: {len(self.size_to_clusters_boundaries_pair[1])} clusters")
 
-    @staticmethod
-    def add_arguments(parser):
-        parser.add_argument(
-            "--plot",
-            action='store_true',
-            help='When add this argument plots a visualization of the clusters, only available in dimension 2',
-        )
-        parser.add_argument(
-            "--max_plots",
-            default=20,
-            type=int,
-            help='The maximum number of clusters that will be visualized',
-        )
-        parser.add_argument(
-            "--dimension",
-            "-d",
-            type=int,
-            default=2,
-            help='The dimention in Z^d',
-        )
-        parser.add_argument(
-            "--max_cluster_size",
-            "-s",
-            default=5,
-            type=int,
-            help="The maximum size of cluster will be calculated",
-        )
+    def _calculate_boundary(self, graph):
+        """Calculate boundary vertices (vertices that can be extended)"""
+        boundary = set()
+        for vertex in graph.vertices:
+            for direction in graph.directions:
+                neighbor = tuple(vertex[i] + direction[i] for i in range(self.d))
+                if neighbor not in graph.vertices:
+                    boundary.add(vertex)
+                    break  # No need to check other directions once we know it's boundary
+        return boundary
 
     def _graph_to_tuple(self, graph):
-        """Convert graph to hashable tuple representation"""
+        """Convert graph to hashable tuple"""
         vertices = tuple(sorted(graph.vertices))
         edges = tuple(sorted(tuple(sorted(edge)) for edge in graph.edges))
         return (vertices, edges)
 
     def _tuple_to_graph(self, graph_tuple):
-        """Convert tuple representation back to ZDSubgraph"""
+        """Convert tuple back to graph"""
         vertices, edges = graph_tuple
         graph = ZDSubgraph(d=self.d)
         for vertex in vertices:
@@ -72,22 +49,34 @@ class cluster_number_density:
             graph.add_edge(edge[0], edge[1])
         return graph
 
-    def is_a_inner_vertex(self, vertex, cluster_tuple):
-        """Check if a vertex is in the boundary in the cluster"""
-        cluster = self._tuple_to_graph(cluster_tuple)
-        neighbor_count = 0
+    def is_inner_vertex(self, vertex, graph_tuple):
+        """Check if vertex is inner (all neighbors are in graph)"""
+        graph = self._tuple_to_graph(graph_tuple)
+        for direction in graph.directions:
+            neighbor = tuple(vertex[i] + direction[i] for i in range(self.d))
+            if neighbor not in graph.vertices:
+                return False
+        return True
+
+    def get_possible_edges(self, graph):
+        """Get all possible edges that can be added to form cycles"""
+        possible_edges = set()
+        vertices = list(graph.vertices)
         
-        for e in cluster.directions:
-            new_vertex = tuple(vertex[i] + e[i] for i in range(self.d))
-            if new_vertex in cluster.vertices:
-                neighbor_count += 1
-                
-        return neighbor_count == 2**self.d
+        # Check all pairs of vertices that are adjacent in Z^d but not connected in graph
+        for i in range(len(vertices)):
+            for j in range(i + 1, len(vertices)):
+                v1, v2 = vertices[i], vertices[j]
+                dist = sum(abs(v1[k] - v2[k]) for k in range(self.d))
+                if dist == 1:  # Adjacent in Z^d
+                    edge = tuple(sorted([v1, v2]))
+                    if edge not in graph.edges:
+                        possible_edges.add(edge)
+        
+        return possible_edges
 
     def recurence_step(self, step):
-        """Grow clusters by one vertex"""
-        if step not in self.size_to_clusters_boundaries_pair:
-            return
+        """Grow clusters by one vertex AND add possible cycles"""
             
         group = self.size_to_clusters_boundaries_pair[step]
         new_group = set()
@@ -95,88 +84,179 @@ class cluster_number_density:
         for (cluster_tuple, boundary) in group:
             cluster = self._tuple_to_graph(cluster_tuple)
             
-            # Try to add new vertices to each boundary vertex
+            # PART 1: Add new vertices (tree growth)
             for vert in boundary:
-                for e in cluster.directions:
-                    new_vertex = tuple(vert[i] + e[i] for i in range(self.d))
+                for direction in cluster.directions:
+                    new_vertex = tuple(vert[i] + direction[i] for i in range(self.d))
                     
-                    # Skip if vertex already in cluster
                     if new_vertex in cluster.vertices:
                         continue
                     
-                    # Create new cluster
-                    new_cluster = ZDSubgraph(d=self.d)
-                    # Copy all vertices and edges
-                    for v in cluster.vertices:
-                        new_cluster.add_vertex(v)
-                    for edge in cluster.edges:
-                        new_cluster.add_edge(edge[0], edge[1])
+                    # Create new cluster with added vertex
+                    new_cluster = self._add_vertex_to_graph(cluster, vert, new_vertex)
+                    new_boundary = self._update_boundary(boundary, vert, new_vertex, new_cluster)
                     
-                    # Add new vertex and edge
-                    new_cluster.add_vertex(new_vertex)
-                    new_cluster.add_edge(vert, new_vertex)
-                    
-                    # Calculate new boundary vertex
-                    new_boundary = set(boundary.copy())
-                    new_boundary.add(new_vertex)
-                    
-
-                    # Convert to hashable representation
-                    new_cluster_tuple = self._graph_to_tuple(new_cluster)
-                    if self.is_a_inner_vertex(vert, new_cluster_tuple):
-                        new_boundary.remove(vert)
-                    
-                    
-                    # Normalize the cluster
-                    new_cluster, norm_boundary = normalize_origin(new_cluster, new_boundary, self.d)
-                    
-                    # Convert to hashable representation
-                    new_boundary_frozen = frozenset(norm_boundary)
-                    new_cluster_tuple = self._graph_to_tuple(new_cluster)
-
-                    new_group.add((new_cluster_tuple, new_boundary_frozen))
+                    # Normalize and store
+                    new_cluster_norm, new_boundary_norm = normalize_origin_with_boundary(new_cluster, new_boundary)
+                    new_group.add((self._graph_to_tuple(new_cluster_norm), frozenset(new_boundary_norm)))
+            
+        final_group = set()
+        # PART 2: Add cycles (only if we have enough vertices)
+        for (new_cluster_tuple, new_boundary) in new_group:
+            # adding old graphs to final group
+            final_group.add((new_cluster_tuple,new_boundary))
+            new_cluster = self._tuple_to_graph(new_cluster_tuple)
+            if len(new_cluster.vertices) >= 3:  # Need at least 3 vertices for a cycle
+                possible_edges = self.get_possible_edges(new_cluster)
+                power_set_edges = subsets(possible_edges)
+                for subset_edges in power_set_edges:   
+                    for edge in subset_edges:
+                        v1, v2 = edge
+                        
+                        cycle_cluster = self._add_edge_to_graph(new_cluster, v1, v2)
+                        cycle_boundary = self._update_boundary_for_cycle(new_boundary, v1, v2, cycle_cluster)
+                        
+                    # Normalize and store
+                    cycle_cluster_norm, cycle_boundary_norm = normalize_origin_with_boundary(cycle_cluster, cycle_boundary)
+                    final_group.add((self._graph_to_tuple(cycle_cluster_norm), frozenset(cycle_boundary_norm)))
         
-        if new_group:
-            self.size_to_clusters_boundaries_pair[step + 1] = new_group
+        if final_group:
+            self.size_to_clusters_boundaries_pair[step + 1] = final_group
+
+    def _add_vertex_to_graph(self, graph, from_vertex, new_vertex):
+        """Create a new graph with added vertex and edge"""
+        new_graph = ZDSubgraph(d=self.d)
+        # Copy all vertices
+        for vertex in graph.vertices:
+            new_graph.add_vertex(vertex)
+        # Copy all edges
+        for edge in graph.edges:
+            new_graph.add_edge(edge[0], edge[1])
+        # Add new vertex and edge
+        new_graph.add_vertex(new_vertex)
+        new_graph.add_edge(from_vertex, new_vertex)
+        return new_graph
+
+    def _add_edge_to_graph(self, graph, v1, v2):
+        """Create a new graph with added edge"""
+        new_graph = ZDSubgraph(d=self.d)
+        # Copy all vertices
+        for vertex in graph.vertices:
+            new_graph.add_vertex(vertex)
+        # Copy all edges
+        for edge in graph.edges:
+            new_graph.add_edge(edge[0], edge[1])
+        # Add new edge
+        new_graph.add_edge(v1, v2)
+        return new_graph
+
+    def _update_boundary(self, old_boundary, from_vertex, new_vertex, new_graph):
+        """Update boundary after adding a new vertex"""
+        new_boundary = set(old_boundary)
+        
+        # Check if from_vertex becomes inner
+        if self.is_inner_vertex(from_vertex, self._graph_to_tuple(new_graph)):
+            new_boundary.discard(from_vertex)
+        
+        # Add new_vertex to boundary (it might become inner later, but starts as boundary)
+        new_boundary.add(new_vertex)
+        
+        return new_boundary
+
+    def _update_boundary_for_cycle(self, old_boundary, v1, v2, new_graph):
+        """Update boundary after adding a cycle edge"""
+        new_boundary = set(old_boundary)
+        
+        # Check if v1 or v2 become inner vertices
+        if self.is_inner_vertex(v1, self._graph_to_tuple(new_graph)):
+            new_boundary.discard(v1)
+        if self.is_inner_vertex(v2, self._graph_to_tuple(new_graph)):
+            new_boundary.discard(v2)
+            
+        return new_boundary
 
     def run(self):
-        """Run the cluster growth algorithm"""
-        size_to_numb_clusters = dict()
-        size_to_numb_clusters[1]=1
-        for step in tqdm(range(1, self.s), leave=True):
+        """Generate all clusters up to size s"""
+        for step in tqdm(range(1, self.s)):
             self.recurence_step(step)
-            size_to_numb_clusters[step+1] = len(self.size_to_clusters_boundaries_pair.get(step+1, []))
+            print(f"Step {step+1}: {len(self.size_to_clusters_boundaries_pair[step+1])} clusters")
         
-        for size in range(1,self.s+1):
-            print(f"Step {size}: {size_to_numb_clusters[size]} clusters")
+        final_size = min(self.s, max(self.size_to_clusters_boundaries_pair.keys()))
+        final_clusters = []
+        
+        for cluster_tuple, boundary in self.size_to_clusters_boundaries_pair.get(final_size, set()):
+            cluster = self._tuple_to_graph(cluster_tuple)
+            final_clusters.append((cluster,boundary))
+        
+        return final_clusters
 
-
-        # Plot the final clusters
-
-        if self.plot:
-            final_clusters_boundary_pair = []
-            for cluster_tuple, boundary in self.size_to_clusters_boundaries_pair[self.s]:
-                cluster = self._tuple_to_graph(cluster_tuple)
-                final_clusters_boundary_pair.append((cluster,boundary))
-            
-            plot_subgraphs_table(
-                final_clusters_boundary_pair,
-                max_plots=self.max_plots,
-                title=f"Clusters of size {self.s}"
-            )
-
-    def get_cluster_counts(self):
-        """Return the number of clusters of each size"""
-        counts = {}
+    def get_statistics(self):
+        """Get statistics about generated clusters"""
+        stats = {}
         for size, clusters in self.size_to_clusters_boundaries_pair.items():
-            counts[size] = len(clusters)
-        return counts
+            stats[size] = {
+                'count': len(clusters),
+                'trees': 0,
+                'with_cycles': 0
+            }
+            for cluster_tuple, _ in clusters:
+                cluster = self._tuple_to_graph(cluster_tuple)
+                # A graph is a tree if |E| = |V| - 1
+                if len(cluster.edges) == len(cluster.vertices) - 1:
+                    stats[size]['trees'] += 1
+                else:
+                    stats[size]['with_cycles'] += 1
+        return stats
+
+def subsets(input_set):
+    """Returns all the nonempty subsets of a given set"""
+    assert isinstance(input_set,set)
+    power_set = set()
+    s = list(input_set)
+    for i in range(1,len(s)+1):
+        for subset in combinations(s,i):
+            power_set.add(subset)
+
+    return power_set
+
+
+
+# Keep the oigin as the vertex with minimun y, and between all vertex with minimun y the origin has minimum x
+def normalize_origin_with_boundary(graph, boundary):
+    """Normalize graph and adjust boundary accordingly"""
+    if not graph.vertices:
+        return graph, set()
     
+    # Find translation vector
+    min_y = min(y for (x, y) in graph.vertices)
+    vertices_at_min_height = [(x, y) for (x, y) in graph.vertices if y == min_y]
+    leftmost_x = min(x for (x, y) in vertices_at_min_height)
+    
+    translate_x, translate_y = -leftmost_x, -min_y
+    
+    # Create normalized graph
+    normalized_graph = ZDSubgraph(d=graph.d)
+    vertex_map = {}
+    
+    for vertex in graph.vertices:
+        new_vertex = (vertex[0] + translate_x, vertex[1] + translate_y)
+        vertex_map[vertex] = new_vertex
+        normalized_graph.add_vertex(new_vertex)
+    
+    for edge in graph.edges:
+        new_edge = (vertex_map[edge[0]], vertex_map[edge[1]])
+        normalized_graph.add_edge(new_edge[0], new_edge[1])
+    
+    # Translate boundary
+    normalized_boundary = set(vertex_map[vertex] for vertex in boundary)
+    
+    return normalized_graph, normalized_boundary
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Initialization Arguments")
-    cluster_number_density.add_arguments(parser)
-    args = parser.parse_args() # Use empty list to avoid command line parsing
 
-    c = cluster_number_density(vars(args))
-    c.run()
+if __name__=="__main__":
+    s=9
+    d=2
+    group_generator = ClusterGenerator(s,d)
+
+    group = group_generator.run()
+    plot_subgraphs_table(group, max_plots=500, title=f'ZD Clusters of size {s}')
