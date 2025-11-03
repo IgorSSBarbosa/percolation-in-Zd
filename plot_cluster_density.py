@@ -20,7 +20,7 @@ def plot_polynomials(poly_dict, p_range=(0, 1), num_points=1000):
     plt.figure(figsize=(16, 12))
     
     # Define a color cycle for distinct colors
-    colors = plt.cm.Set1(np.linspace(0, 1, len(poly_dict)))
+    colors = plt.cm.autumn(np.linspace(0, 1, len(poly_dict)))
     
     # Process and plot each polynomial
     for (key, poly_str), color in zip(poly_dict.items(), colors):
@@ -32,7 +32,7 @@ def plot_polynomials(poly_dict, p_range=(0, 1), num_points=1000):
             def safe_eval(p_val):
                 # Replace p with the actual value in the expression
                 expr = poly_str.replace('p', f'({p_val})')
-                return eval(expr)
+                return int(key)*eval(expr)
             
             # Vectorize the function to work with arrays
             vec_eval = np.vectorize(safe_eval)
