@@ -1,3 +1,4 @@
+import argparse
 from graph_d import ZDSubgraph
 from Z2_plot import plot_subgraphs_table
 from tqdm import tqdm
@@ -5,13 +6,13 @@ from itertools import chain, combinations
 
 
 class ClusterGenerator:
-    def __init__(self, s, d=2):
-        self.s = s
-        self.d = d
+    def __init__(self, args):
+        self.s = args["max_size_calculated"]
+        self.d = args["dimension"]
         
         # Initialize with origin
-        graph = ZDSubgraph(d=d)
-        origin = tuple([0] * d)
+        graph = ZDSubgraph(d=self.d)
+        origin = tuple([0] * self.d)
         graph.add_vertex(origin)
         
         self.size_to_clusters_boundaries_pair = dict()
@@ -21,6 +22,34 @@ class ClusterGenerator:
         initial_pair.add((self._graph_to_tuple(graph), frozenset(boundary)))
         self.size_to_clusters_boundaries_pair[1] = initial_pair
         print(f"Step 1: {len(self.size_to_clusters_boundaries_pair[1])} clusters")
+
+    @staticmethod
+    def add_arguments(parser):
+        parser.add_argument(
+            "--max_size_calculated",
+            "-s",
+            type=int,
+            default=5,
+            help="The number of iterations the algorithm will take. Which corresponds to the maximum s, such the P_p(|C|=s) will be calculated",
+        )
+        parser.add_argument(
+            "--dimension",
+            "-d",
+            type=int,
+            default=2,
+            help="dimension of the Z^d lattice taken.",
+        )
+        parser.add_argument(
+            "--plot",
+            action="store_true",
+            help="Plot a visualization of the clusters"
+        )
+        parser.add_argument(
+            "--max_plots",
+            type=int,
+            default = 442,
+            help="set the maximum number of clusters printed"
+        )
 
     def _calculate_boundary(self, graph):
         """Calculate boundary vertices (vertices that can be extended)"""
@@ -254,9 +283,15 @@ def normalize_origin_with_boundary(graph, boundary):
 
 
 if __name__=="__main__":
-    s=9
-    d=2
-    group_generator = ClusterGenerator(s,d)
+    parser = argparse.ArgumentParser(description="Initialization Arguments")
+    ClusterGenerator.add_arguments(parser)
+    args = vars(parser.parse_args()) # Use empty list to avoid command line parsing
+    group_generator = ClusterGenerator(args)
 
     group = group_generator.run()
-    plot_subgraphs_table(group, max_plots=500, title=f'ZD Clusters of size {s}')
+    if args['plot']:
+        plot_subgraphs_table(
+            group, 
+            max_plots=args['max_plots'], 
+            title=f'ZD Clusters of size {args["max_size_calculated"]}'
+            )
