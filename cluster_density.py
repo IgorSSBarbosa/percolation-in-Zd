@@ -1,5 +1,6 @@
 import argparse
 import json
+import numpy as np
 
 from graph_d import ZDSubgraph
 from Z2_plot import plot_subgraphs_table
@@ -25,7 +26,6 @@ class ClusterGenerator:
         initial_pair = set()
         initial_pair.add((self._graph_to_tuple(graph), frozenset(boundary)))
         self.size_to_clusters_boundaries_pair[1] = initial_pair
-        print(f"Step 1: {len(self.size_to_clusters_boundaries_pair[1])} clusters")
 
     @staticmethod
     def add_arguments(parser):
@@ -160,7 +160,7 @@ class ClusterGenerator:
                     final_group.add((self._graph_to_tuple(cycle_cluster_norm), frozenset(cycle_boundary_norm)))
         
         if final_group:
-            self.size_to_clusters_boundaries_pair[step + 1] = final_group
+            self.size_to_clusters_boundaries_pair[step+1] = final_group
 
     def _add_vertex_to_graph(self, graph, from_vertex, new_vertex):
         """Create a new graph with added vertex and edge"""
@@ -217,23 +217,30 @@ class ClusterGenerator:
     def run(self):
         """Generate all clusters up to size s"""
         cluster_density = dict()
+        tree_number = dict()
 
-        for step in tqdm(range(1, self.s)):
-            self.recurence_step(step)
-            print(f"Step {step+1}: {len(self.size_to_clusters_boundaries_pair[step+1])} clusters")
+        for step in tqdm(range(1, self.s+1)):
+            
+            print(f"Step {step}: {len(self.size_to_clusters_boundaries_pair[step])} clusters")
         
-            final_size = min(self.s, max(self.size_to_clusters_boundaries_pair.keys()))
             final_clusters = []
             
-            for cluster_tuple, boundary in self.size_to_clusters_boundaries_pair.get(final_size, set()):
+            for cluster_tuple, boundary in self.size_to_clusters_boundaries_pair.get(step, set()):
                 cluster = self._tuple_to_graph(cluster_tuple)
                 final_clusters.append((cluster,boundary))
 
-            polynomial = cluster_probability(final_clusters)
-            cluster_density[final_size] = polynomial
+            polynomial, tree_number[step] = cluster_probability(final_clusters)
+            cluster_density[step] = polynomial
+            
+            if step < self.s+1:
+                self.recurence_step(step)
         
+        data = dict()
+        data['cluster_density'] = cluster_density
+        data['tree_number'] = tree_number
+
         with open(self.file,'w') as f:
-            json.dump(cluster_density, f, indent=4)
+            json.dump(data, f, indent=4)
 
         return final_clusters
 
@@ -303,7 +310,7 @@ def cluster_probability(group):
     "returns a list of polynomials f(s) = P_p(|C|=s), the probability of a the origin cluster to have the size s"
     g = dict()
 
-    # count the number of p^op (1 - p)^cl
+    # count the number of cluster by the quantity of open and closed edges
     for (cluster,_) in group:
         open_edges = len(cluster.edges)
         closed_edges = len(cluster.get_boundary())
@@ -314,10 +321,23 @@ def cluster_probability(group):
     
     # create the polynomial
     f = str()
+    # count the number of clusters with minimal open edges, i.e. count the number of trees
+    min_open_edges = np.inf
+    tree_number = 0
     for (open_edges,closed_edges) in g.keys():
+        # writting the contribution of clusters with certain number of open/closed edges
         f += f' + {g[(open_edges,closed_edges)]}*p**{open_edges}*(1-p)**{closed_edges}'
-    
-    return f[3:]
+
+        # Atualize the number of trees
+        if open_edges == min_open_edges:
+            tree_number += g[(open_edges,closed_edges)]
+
+        if open_edges < min_open_edges:
+            min_open_edges=open_edges
+            tree_number = g[(open_edges,closed_edges)]
+
+
+    return f[3:], tree_number
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description="Initialization Arguments")
