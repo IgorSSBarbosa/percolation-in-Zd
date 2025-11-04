@@ -37,8 +37,12 @@ def theta(y, p):
     theta_compl = sum(v)
     theta = [1 - x for x in theta_compl]
     plt.figure(figsize=(16,12))
-    plt.plot(p, theta, label='theta_(p)', linewidth=2)
-    plt.show()
+    plt.plot(p, theta, label='θ(p)', linewidth=2)
+    plt.xlabel('p',fontsize=12)
+    plt.ylabel('θ(p)',fontsize=12)
+    plt.title(f'Percolation Probability, s={len(y)}',fontsize=14)
+    plt.legend()
+    return theta
 
 def mean_cluster_size(y,p):
     v = [0]*len(y)
@@ -47,10 +51,14 @@ def mean_cluster_size(y,p):
 
     qui = sum(v)
     plt.figure(figsize=(16,12))
-    plt.plot(p, qui, label='qui(p)', linewidth=2)
-    plt.show()
+    plt.plot(p, qui, label='χ_f(p)', linewidth=2)
+    plt.xlabel('p',fontsize=12)
+    plt.ylabel('χ_f(p)',fontsize=12)
+    plt.title(f'Mean cluster density, s={len(y)}',fontsize=14)
+    plt.legend()
+    return qui
 
-def p_c(y, numb_points):
+def critical_parameter(y, numb_points):
     v = [0]*len(y)
     p_c = [0]*len(y)
     for (key, value) in y.items():
@@ -59,7 +67,11 @@ def p_c(y, numb_points):
 
     plt.figure(figsize=(16,12))
     plt.plot(p_c, label='Critical point', linewidth=2)
-    plt.show()
+    plt.xlabel('s',fontsize=12)
+    plt.ylabel('p_c',fontsize=12)
+    plt.title(f'Critical Parameter, s={len(y)}',fontsize=14)
+    plt.legend()
+    return p_c
     
 
 
@@ -70,7 +82,8 @@ if __name__ == '__main__':
     p = np.linspace(p_range[0], p_range[1], num_points)
 
     y = cluster_density_eval(p, cluster_density_file)
-    theta(y,p)
-    mean_cluster_size(y,p)
+    theta = theta(y,p)
+    qui = mean_cluster_size(y,p)
 
-    p_c(y,num_points)
+    p_c = critical_parameter(y,num_points)
+    plt.show()
