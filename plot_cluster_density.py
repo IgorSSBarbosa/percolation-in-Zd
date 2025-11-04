@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import json
 
 
-def plot_polynomials(poly_dict, p_range=(0, 1), num_points=1000):
+def plot_polynomials(poly_dict, p_range=(0, 1), num_points=1000, title='Cluster density'):
     """
     Plot polynomial functions from a dictionary.
     
@@ -48,14 +48,11 @@ def plot_polynomials(poly_dict, p_range=(0, 1), num_points=1000):
     # Customize the plot
     plt.xlabel('p', fontsize=12)
     plt.ylabel('Value', fontsize=12)
-    plt.title('Cluster density', fontsize=14)
+    plt.title(title, fontsize=14)
     plt.legend()
-    plt.grid(True, alpha=0.3)
-    plt.xlim(p_range)
+    plt.grid(True, alpha=0.85)
+    # plt.xlim(p_range)
     
-    # Show the plot
-    plt.tight_layout()
-    plt.show()
 
 # Example usage with your input
 if __name__ == "__main__":
@@ -65,5 +62,10 @@ if __name__ == "__main__":
         data = json.load(f)
 
     cluster_density_poly = data['cluster_density']
+    derivative = data['derivative']
     
     plot_polynomials(cluster_density_poly)
+    plot_polynomials(derivative,title='Derivative')
+    # Show the plot
+    plt.tight_layout()
+    plt.show()
