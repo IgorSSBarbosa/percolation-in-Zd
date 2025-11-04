@@ -218,6 +218,7 @@ class ClusterGenerator:
         """Generate all clusters up to size s"""
         cluster_density = dict()
         tree_number = dict()
+        derivative = dict()
 
         for step in tqdm(range(1, self.s+1)):
             
@@ -229,8 +230,10 @@ class ClusterGenerator:
                 cluster = self._tuple_to_graph(cluster_tuple)
                 final_clusters.append((cluster,boundary))
 
-            polynomial, tree_number[step] = cluster_probability(final_clusters)
+            polynomial, tree_n, dp = cluster_probability(final_clusters)
             cluster_density[step] = polynomial
+            tree_number[step] = tree_n
+            derivative[step] = dp
             
             if step < self.s+1:
                 self.recurence_step(step)
@@ -238,6 +241,7 @@ class ClusterGenerator:
         data = dict()
         data['cluster_density'] = cluster_density
         data['tree_number'] = tree_number
+        data['derivative'] = derivative
 
         with open(self.file,'w') as f:
             json.dump(data, f, indent=4)
@@ -321,12 +325,22 @@ def cluster_probability(group):
     
     # create the polynomial
     f = str()
+    # The derivative of the polynomial
+    df = str()
     # count the number of clusters with minimal open edges, i.e. count the number of trees
     min_open_edges = np.inf
     tree_number = 0
     for (open_edges,closed_edges) in g.keys():
         # writting the contribution of clusters with certain number of open/closed edges
         f += f' + {g[(open_edges,closed_edges)]}*p**{open_edges}*(1-p)**{closed_edges}'
+
+        # writting the contribution of clusters on the derivative
+        if open_edges>0:
+            df += f' + {g[(open_edges,closed_edges)]}*({open_edges}*(1-p)-{closed_edges}*p)*p**{open_edges - 1 }*(1-p)**{closed_edges - 1}'
+        elif open_edges == 0:
+            df += f'   -{g[(open_edges,closed_edges)]}*{closed_edges}*(1-p)**{closed_edges - 1}'
+
+ 
 
         # Atualize the number of trees
         if open_edges == min_open_edges:
@@ -337,7 +351,7 @@ def cluster_probability(group):
             tree_number = g[(open_edges,closed_edges)]
 
 
-    return f[3:], tree_number
+    return f[3:], tree_number, df[3:]
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description="Initialization Arguments")
