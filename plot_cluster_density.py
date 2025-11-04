@@ -57,7 +57,7 @@ def plot_polynomials(poly_dict, p_range=(0, 1), num_points=1000, title='Cluster 
 # Example usage with your input
 if __name__ == "__main__":
     
-    cluster_density_file = 'Z2clusterdensity.json'
+    cluster_density_file = 'simulation_data/Z2clusterdensity.json'
     with open(cluster_density_file, 'r') as f:
         data = json.load(f)
 
