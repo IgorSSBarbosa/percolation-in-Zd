@@ -122,7 +122,7 @@ def plot_single_subgraph(ax, G, boundary, n_plots, idx=None):
     
     # Plot inner vertices (regular vertices)
     standard_size = min(20, 50/np.sqrt(n_plots))
-    vertices_size = max(0.1, standard_size)
+    vertices_size = standard_size
     if inner_vertex:
         inner_vert_x = [v[0] for v in inner_vertex]
         inner_vert_y = [v[1] for v in inner_vertex]
