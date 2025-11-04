@@ -101,9 +101,30 @@ def critical_parameter2(cluster_density_file):
     plt.legend()
     return p_c
 
+def cluster_volume(p_c, cluster_density_file):
+    # load the polynomials
+    with open(cluster_density_file, 'r') as f:
+        data = json.load(f)
+    cluster_density = data["cluster_density"]
+    # define cluster volume
+    cluster_vol = [0]*len(cluster_density)
+
+    for (i,s) in enumerate(cluster_density.keys()):
+        poly_str = cluster_density[s]
+        def cluster_density_function(p):
+            # Replace p with the actual value in the expression
+            expr = poly_str.replace('p', f'({p})')
+            return eval(expr)
+        cluster_vol[i] = cluster_density_function(p_c[i])
+    plt.figure(figsize=(16,12))
+    plt.plot(cluster_vol, label='Cluster Volume', linewidth=2)
+    plt.xlabel('s',fontsize=12)
+    plt.ylabel('cluster volume',fontsize=12)
+    plt.title(f'Cluster Volume, s={len(y)}',fontsize=14)
+    plt.legend()
 
 if __name__ == '__main__':
-    cluster_density_file = 'Z2clusterdensity.json'
+    cluster_density_file = 'simulation_data/Z2clusterdensity.json'
     p_range = [0,1]
     num_points = 1000
     p = np.linspace(p_range[0], p_range[1], num_points)
@@ -114,4 +135,6 @@ if __name__ == '__main__':
 
     p_c = critical_parameter(y,num_points)
     p_c2 = critical_parameter2(cluster_density_file)
+
+    cluster_vol = cluster_volume(p_c, cluster_density_file)
     plt.show()
