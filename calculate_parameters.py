@@ -1,6 +1,7 @@
 import json
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.optimize import root_scalar
 
 def cluster_density_eval(p, cluster_density_file):
     """ Evaluate the number of cluster by vertex n(s,p) in p"""
@@ -73,6 +74,32 @@ def critical_parameter(y, numb_points):
     plt.legend()
     return p_c
     
+def critical_parameter2(cluster_density_file):
+    # load the polynomials
+    with open(cluster_density_file, 'r') as f:
+        data = json.load(f)
+    derivative_poly = data["derivative"]
+    # define the critical parameters
+    p_c = [0]* len(derivative_poly)
+    for (i,s) in enumerate(derivative_poly.keys()):
+        poly_str = derivative_poly[s]
+        def derivative_function(p):
+            # Replace p with the actual value in the expression
+            expr = poly_str.replace('p', f'({p})')
+            return eval(expr)
+        if i==0:
+            result = root_scalar(derivative_function, method='brentq', bracket=[0.001, 1])
+        else:
+            result = root_scalar(derivative_function, method='brentq', bracket=[0.001, 0.999])
+
+        p_c[i] = result['root']
+    plt.figure(figsize=(16,12))
+    plt.plot(p_c, label='Critical point2', linewidth=2)
+    plt.xlabel('s',fontsize=12)
+    plt.ylabel('p_c',fontsize=12)
+    plt.title(f'Critical Parameter, s={len(y)}',fontsize=14)
+    plt.legend()
+    return p_c
 
 
 if __name__ == '__main__':
@@ -86,4 +113,5 @@ if __name__ == '__main__':
     qui = mean_cluster_size(y,p)
 
     p_c = critical_parameter(y,num_points)
+    p_c2 = critical_parameter2(cluster_density_file)
     plt.show()
