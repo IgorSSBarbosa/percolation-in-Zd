@@ -122,6 +122,25 @@ def cluster_volume(p_c, cluster_density_file):
     plt.ylabel('cluster volume',fontsize=12)
     plt.title(f'Cluster Volume, s={len(y)}',fontsize=14)
     plt.legend()
+    return cluster_vol
+
+def save_data(y, theta, qui, p_c, p_c2, cluster_vol, num_points, file):
+    # convert y to a seriasable dictionary
+    y_save = dict()
+    for k in y.keys():
+        y_save[k] = y[k].tolist()
+    
+    data ={
+        'number of points p': num_points,
+        'cluster_density': y_save,
+        'theta': theta,
+        'qui':list(qui),
+        'p_c': list(p_c),
+        'p_c2': p_c2,
+        'cluster_vol': cluster_vol,
+    }
+    with open(file,'w') as f:
+        json.dump(data, f, indent=4)
 
 if __name__ == '__main__':
     cluster_density_file = 'simulation_data/Z2clusterdensity.json'
@@ -137,4 +156,15 @@ if __name__ == '__main__':
     p_c2 = critical_parameter2(cluster_density_file)
 
     cluster_vol = cluster_volume(p_c, cluster_density_file)
+    file = 'simulation_data/Z2parameters.json'
+    save_data(
+        y,
+        theta,
+        qui,
+        p_c,
+        p_c2,
+        cluster_vol,
+        num_points,
+        file
+    )
     plt.show()
