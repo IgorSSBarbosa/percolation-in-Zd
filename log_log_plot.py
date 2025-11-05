@@ -72,11 +72,6 @@ def plot_loglog_regression(x, y, a_hat, b_hat, r_squared, parameter):
     ax2.legend()
     ax2.grid(True, alpha=0.3)
     
-    # # Use log scale for better visualization if data spans multiple orders
-    # if (x.max() / x.min() > 100) or (y.max() / y.min() > 100):
-    #     ax2.set_xscale('log')
-    #     ax2.set_yscale('log')
-    
     plt.tight_layout()
     plt.show()
 
