@@ -104,30 +104,11 @@ def initialize_ping_pong():
     # set the real values of p_c and zeta if known for better visualization
     args.true_p_c = 0.5
     
-    data_path = args.data_path
-
     # translate cancellation_index if it's a string representation of a list
     if isinstance(args.cancellation_index, str):
         args.cancellation_index = translate_str_to_list(args.cancellation_index)
 
-    # Load data
-    data= data_loader(data_path, args.parameter)
-    # ignore first point in calculation of p_c
-    if args.parameter in ['p_c', 'p_c2']:
-        data_np = np.array(data[1:])
-    else:
-        data_np = np.array(data)
-    
-    # if dimension is one no mean need to be taken
-    dim = len(data_np.shape)
-    if dim>1:
-        X_n = np.mean(data, axis=1)
-        var = np.var(data, axis=1, ddof=1)
-    else:
-        X_n = data_np
-        var = [0]*data_np.shape[0]
-
-    return args, X_n, var
+    return args
 
 def ping_pong(J, args, step, X_n):
 
@@ -150,8 +131,8 @@ def ping_pong(J, args, step, X_n):
 
     return p_c_estimate, zeta_estimate
 
-def main():
-    args, X_n, var = initialize_ping_pong()
+def run_ping_pong(args, X_n):
+
     J = args.cancellation_index
 
     if isinstance(J, int):
@@ -177,4 +158,10 @@ def main():
     plt.show()
 
 if __name__ == "__main__":
-    main()
+    
+    args = initialize_ping_pong()
+    # Load data
+    X_n, var = data_loader(args.data_path, args.parameter)
+
+    X_n, var = np.array(X_n), np.array(var)
+    run_ping_pong(args, X_n)
