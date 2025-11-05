@@ -89,7 +89,6 @@ if __name__ == "__main__":
     a_hat, b_hat, r_squared = loglog_regression(x, X_n)
     
     print("Power Law Regression Results:")
-    # print(f"True coefficients: a = {true_a}, b = {true_b}")
     print(f"Estimated coefficients: a_hat = {a_hat:.4f}, b_hat = {b_hat:.4f}")
     print(f"R-squared: {r_squared:.4f}")
     
