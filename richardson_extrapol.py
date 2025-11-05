@@ -53,6 +53,13 @@ def parse_arguments(parser):
         default=None,
         help="Number of Richardson Extrapolations cancalations will be printed"
     )
+    parser.add_argument(
+        "--type_expansion",
+        "-type",
+        choices=['exponential', 'power_law'],
+        help='Chooses the type of expansion assumed to calculate the right bias correction estimator',
+        default='exponential',
+    )
 
     return parser.parse_args()
 
@@ -88,7 +95,21 @@ def data_loader(data_path, parameter):
     with open(data_path,'r') as f:
         data_dict = json.load(f)
     data = data_dict[parameter]
-    return data
+    if parameter in ['p_c2']:
+        data_np = np.array(data[1:])
+    else:
+        data_np = np.array(data)
+    
+    # if dimension is one no mean need to be taken
+    dim = len(data_np.shape)
+    if dim>1:
+        X_n = np.mean(data, axis=1)
+        var = np.var(data, axis=1, ddof=1)
+    else:
+        X_n = data_np
+        var = [0]*data_np.shape[0]
+
+    return X_n, var
 
 
 def convergence_rate(args, X_n, p_c=None):
@@ -130,9 +151,10 @@ def plot_inverted_data(X_n, args):
     domain = [1/k for k in range(1, len(X_n)+1)]
     plt.figure(figsize=(16, 10))
     plt.plot(domain, np.array(X_n), 'o-')
-    plt.xlabel('Index')
+    plt.xlabel('1/k')
     plt.xlim( 1/(len(X_n)+2) , 1.1) # set x limit to be between 0 and len(X_n)-1
-    plt.ylabel('Value')
+    plt.ylabel(f'{args.parameter}in log scale')
+    plt.xscale('log')
     plt.title('Original Data')
     if args.true_p_c is not None:
         plt.axhline(y=args.true_p_c, color='r', linestyle='--', label='True Limit: {:.4f}'.format(args.true_p_c))
@@ -151,8 +173,9 @@ def plot_data(X_n, var, args):
     plt.plot(range(len(X_n)), X_n, 'o-')
     plt.fill_between(range(len(X_n)), X_n - np.sqrt(var), X_n + np.sqrt(var), color='gray', alpha=0.3, label='1 Std Dev')   
     plt.xlabel('Index')
+    plt.xscale('log')
     plt.xlim(0, len(X_n)) # set x limit to be between 0 and len(X_n)-1
-    plt.ylabel('Value')
+    plt.ylabel(f'{args.parameter} in log scale')
     plt.title('Original Data')
     if args.true_p_c is not None:
         plt.axhline(y=args.true_p_c, color='r', linestyle='--', label='True Limit: {:.4f}'.format(args.true_p_c))
@@ -175,7 +198,7 @@ def plot_results(X_n, R, args, p_c=None):
         plt.axhline(y=p_c, color='r', linestyle='--', label='True Limit: {:.4f}'.format(p_c))
     plt.xlabel('Index')
     plt.xlim(0, len(X_n)) # set x limit to be between 0 and len(X_n)-1
-    plt.ylabel('Value')
+    plt.ylabel(f'{args.parameter}')
     plt.title('Richardson Extrapolation')
     plt.legend()
     plt.grid()
@@ -201,20 +224,7 @@ def main():
     data_path = args.data_path
 
     # Load data
-    data= data_loader(data_path, args.parameter)
-    if args.parameter in ['p_c', 'p_c2']:
-        data_np = np.array(data[1:])
-    else:
-        data_np = np.array(data)
-    
-    # if dimension is one no mean need to be taken
-    dim = len(data_np.shape)
-    if dim>1:
-        X_n = np.mean(data, axis=1)
-        var = np.var(data, axis=1, ddof=1)
-    else:
-        X_n = data_np
-        var = [0]*data_np.shape[0]
+    X_n, var = data_loader(data_path, args.parameter)
     
     plot_data(X_n, var, args)
     plot_inverted_data(X_n, args)
