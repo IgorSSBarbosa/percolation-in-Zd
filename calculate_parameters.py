@@ -55,7 +55,7 @@ def mean_cluster_size(y,p):
     plt.plot(p, qui, label='χ_f(p)', linewidth=2)
     plt.xlabel('p',fontsize=12)
     plt.ylabel('χ_f(p)',fontsize=12)
-    plt.title(f'Mean cluster density, s={len(y)}',fontsize=14)
+    plt.title(f'Mean cluster size, s={len(y)}',fontsize=14)
     plt.legend()
     return qui
 
