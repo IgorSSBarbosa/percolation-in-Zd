@@ -1,8 +1,8 @@
+import argparse
 import numpy as np
-import matplotlib.pyplot as plt
-from scipy import stats
 from richardson_extrapol import data_loader
-from ping_pong import ping_pong
+from ping_pong import initialize_ping_pong, run_ping_pong
+from richardson_extrapol import richardson_extrapolation,parse_arguments,plot_data,plot_inverted_data,convergence_rate,plot_results,plot_zeta_estimates
 
 def loglog_consecutive_slopes(x, y):
     """
@@ -44,6 +44,7 @@ if __name__ == "__main__":
     data_path='simulation_data/Z2parameters.json'
     parameter='cluster_vol'
     X_n, var = data_loader(data_path, parameter)
+    var = var[1:]
 
     x = range(1,len(X_n)+1)
     x,X_n = np.array(x), np.array(X_n)
@@ -55,7 +56,16 @@ if __name__ == "__main__":
     delta = [1/(1-slope) for slope in slopes]
     print(f'δ = {delta}')
 
+    # Applying Richardson extrapolation on the deltas
+    parser = argparse.ArgumentParser(description = "Richardson Extrapolation arguments")
+    args = parse_arguments(parser)
+    plot_data(delta, var, args)
+    plot_inverted_data(delta,args)
+    zeta, zeta_estimates = convergence_rate(args,delta)
+    R = richardson_extrapolation(delta,zeta)
+    plot_results( delta, R, args)
+    plot_zeta_estimates(args,zeta_estimates)
+
     # Apply ping-pong in the slopes
-
-    
-
+    args = initialize_ping_pong()
+    run_ping_pong(args, delta)
