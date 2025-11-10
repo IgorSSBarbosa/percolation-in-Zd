@@ -1,8 +1,6 @@
 import matplotlib.pyplot as plt
-from typing import List
-from uniform_coupling_generator import sample_bond_percolation
 
-def plot_percolation(edges: List[float], d: int, L: int, p: float):
+def plot_percolation(edges: list[float], d: int, L: int, p: float):
     """
     Plot bond percolation configuration for dimensions 1, 2, and 3.
     
@@ -30,7 +28,7 @@ def plot_percolation(edges: List[float], d: int, L: int, p: float):
         _plot_3d_percolation(edges, L, p, fig)
 
 
-def _plot_1d_percolation(edges: List[float], L: int, p: float, fig):
+def _plot_1d_percolation(edges: list[float], L: int, p: float, fig):
     """Plot 1D percolation"""
     ax = fig.add_subplot(111)
     
@@ -70,7 +68,7 @@ def _plot_1d_percolation(edges: List[float], L: int, p: float, fig):
     ax.plot([], [], color='gray', linewidth=2, label='Closed bond')
     ax.legend()
 
-def _plot_2d_percolation(edges: List[float], L: int, p: float, fig):
+def _plot_2d_percolation(edges: list[float], L: int, p: float, fig):
     """Plot 2D percolation"""
     ax = fig.add_subplot(111)
     
@@ -126,7 +124,7 @@ def _plot_2d_percolation(edges: List[float], L: int, p: float, fig):
     ax.plot([], [], color='gray', linewidth=1, alpha=0.4, label='Closed bond')
     ax.legend()
 
-def _plot_3d_percolation(edges: List[float], L: int, p: float, fig):
+def _plot_3d_percolation(edges: list[float], L: int, p: float, fig):
     """Plot 3D percolation"""
     ax = fig.add_subplot(111, projection='3d')
     
@@ -200,6 +198,8 @@ def _plot_3d_percolation(edges: List[float], L: int, p: float, fig):
 
 # Example usage
 if __name__ == "__main__":
+    from uniform_coupling_generator import sample_bond_percolation
+
     # Test different dimensions
     for dim in [1, 2, 3]:
         print(f"\n=== Testing {dim}D Percolation ===")
