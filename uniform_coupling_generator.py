@@ -110,7 +110,7 @@ def graph_structure(d: int, L: int, edges: list[float], p:float) -> ZDSubgraph:
 
     
     for i,edge_value in enumerate(edges):
-        if edge_value<1:
+        if edge_value<p:
             edge = get_edge_from_index(d=d,L=L, edge_index=i)
             graph.add_edge(edge[0],edge[1])
     return graph
@@ -128,3 +128,6 @@ if __name__=="__main__":
     if d<4:
         plot_percolation(edges_unif, d=d, L=L, p=p)
         plt.show()
+
+    components = G.get_components()
+    print(components)
