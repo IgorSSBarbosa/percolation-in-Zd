@@ -1,5 +1,4 @@
 import numpy as np
-from collections import defaultdict, deque
 
 class ZDSubgraph:
     def __init__(self, d=2):
@@ -167,7 +166,7 @@ class UnionFindZD:
     
     def get_component_sizes(self):
         """Return sizes of all connected components"""
-        component_sizes = defaultdict(int)
+        component_sizes = dict()
         for id_val in self.parent:
             root = self.find(self._get_coord(id_val))
             component_sizes[root] = self.size[root]
