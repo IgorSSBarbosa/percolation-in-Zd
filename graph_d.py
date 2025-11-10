@@ -83,6 +83,12 @@ class ZDSubgraph:
     def connected_components(self):
         """Return the number of connected components"""
         return self.uf.num_components()
+    def get_components(self):
+        """Return a list of connected components sorted by size"""
+        components = []
+        for value in self.uf.get_component_sizes().values():
+            components.append(value)
+        return sorted(components)
     
     def is_connected(self, coord1, coord2):
         """Check if two vertices are connected"""
