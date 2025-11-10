@@ -13,10 +13,7 @@ def sample_bond_percolation(d: int, L: int, random_state=None) -> List[float]:
     # Calculate number of edges systematically
     if d == 1:
         num_edges = L
-    elif d == 2:
-        num_edges = (L + 1) * L + L * (L + 1)  # horizontal + vertical
-    elif d == 3:
-        num_edges = (L + 1)**2 * L * 3  # edges in x, y, z directions
+        
     else:
         # General formula for d dimensions
         num_edges = d * (L + 1)**(d - 1) * L
